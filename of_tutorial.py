@@ -134,8 +134,8 @@ class Tutorial (object):
 
     # Comment out the following line and uncomment the one after
     # when starting the exercise.
-    self.act_like_hub(packet, packet_in)
-    #self.act_like_switch(packet, packet_in)
+    #self.act_like_hub(packet, packet_in)
+    self.act_like_switch(packet, packet_in)
 
 
 
