@@ -106,9 +106,17 @@ class l3_switch (EventMixin):
 
     # For each switch, we map IP addresses to Entries
     self.arpTable = {}
-    self.arpTable[3] ={IPAddr('10.0.1.1'):Entry(1, EthAddr('b6:41:ca:a3:4b:4b'))}
-    self.arpTable[4] ={IPAddr('10.0.2.1'):Entry(2, EthAddr('7a:2a:6a:1e:46:da'))}
-
+    #arp for gateway 'switch'
+    self.arpTable[3] ={IPAddr('10.0.1.1'):Entry(1, EthAddr('0e:9f:f2:d4:62:6b'))}
+    self.arpTable[4] ={IPAddr('10.0.2.1'):Entry(2, EthAddr('fe:50:be:5d:c6:18'))}
+    #routing table
+    #s3
+    self.arpTable[3][IPAddr('10.0.2.2')]=Entry(2, EthAddr('5a:d5:a8:ca:f5:60'))
+    self.arpTable[3][IPAddr('10.0.1.2')]=Entry(1, EthAddr('00:00:00:00:00:01'))
+    #s4
+    self.arpTable[4][IPAddr('10.0.1.1')]=Entry(1, EthAddr('9e:74:a6:68:f7:29'))
+    self.arpTable[4][IPAddr('10.0.1.2')]=Entry(1, EthAddr('9e:74:a6:68:f7:29'))
+    self.arpTable[4][IPAddr('10.0.2.2')]=Entry(2, EthAddr('00:00:00:00:00:02'))
 
     # This timer handles expiring stuff
     self._expire_timer = Timer(5, self._handle_expiration, recurring=True)
@@ -174,8 +182,13 @@ class l3_switch (EventMixin):
     if packet.type == ethernet.LLDP_TYPE:
       # Ignore LLDP packets
       return
+    #log.debug("%s", self.arpTable)
 
     if isinstance(packet.next, ipv4):
+      #if isinstance(packet.next, ICMP):
+        #log.debug("we had an ICMP packet we need to replay")
+
+      log.debug("we had an %s packet",packet.next)
       log.debug("%i %i IP %s => %s", dpid,inport,
                 packet.next.srcip,packet.next.dstip)
 
@@ -285,7 +298,7 @@ class l3_switch (EventMixin):
             else:
               log.debug("%i %i learned %s", dpid,inport,str(a.protosrc))
             self.arpTable[dpid][a.protosrc] = Entry(inport, packet.src)
-            log.debug("%s", self.arpTable)
+            #log.debug("%s", self.arpTable)
 
             # Send any waiting packets...
             self._send_lost_buffers(dpid, a.protosrc, packet.src, inport)
@@ -315,8 +328,8 @@ class l3_switch (EventMixin):
                   e.set_payload(r)
                   log.debug("%i %i answering ARP for %s" % (dpid, inport,
                    str(r.protosrc)))
-                  log.debug("payload src:%s des:%s hwsrc%s, packet src:%s dst:%s" % (r.protosrc,  r.protodst,
-                   self.arpTable[dpid][a.protodst].mac,self.arpTable[dpid][a.protodst].mac,a.hwsrc))
+                  #log.debug("payload src:%s des:%s hwsrc%s, packet src:%s dst:%s" % (r.protosrc,  r.protodst,
+                  # self.arpTable[dpid][a.protodst].mac,self.arpTable[dpid][a.protodst].mac,a.hwsrc))
                   msg = of.ofp_packet_out()
                   msg.data = e.pack()
                   msg.actions.append(of.ofp_action_output(port =
